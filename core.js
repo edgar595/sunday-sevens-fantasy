@@ -3,7 +3,7 @@
 var POSN={GK:"goalkeeper",DEF:"defender",MID:"midfielder",FWD:"forward"};
 var POSL=["DEF","MID","FWD"];
 var BUDGET=32,FORMS=["2-2-1","2-1-2","1-2-2","3-1-1"];
-var GOALPTS={GK:6,DEF:6,MID:5,FWD:4},CSPTS={GK:2,DEF:2,MID:1,FWD:0},MAXSIDE=3,SQUAD=5;
+var GOALPTS={GK:6,DEF:6,MID:5,FWD:4},ASTPTS={GK:5,DEF:5,MID:4,FWD:3},CSPTS={GK:2,DEF:2,MID:1,FWD:0},MAXSIDE=3,SQUAD=5;
 var BONUS=[3,2,1],VOTE_MIN=5;
 
 /* ---------- State ---------- */
@@ -27,7 +27,7 @@ function addMin(t,m){var a=t.split(":").map(Number),x=a[0]*60+a[1]+m;return Stri
 /* ---------- Derived data ---------- */
 /* Scoring: 1 point per game played; wins, clean sheets and goals conceded only count in games the player was on the pitch for.
    Goals, assists and cards are totals for the Sunday. Bonus (3/2/1) comes from the players' vote, or from the admin. */
-function scoreOf(s,pos){var p=s.apps+s.g*GOALPTS[pos]+s.a*3+s.cs*CSPTS[pos]+s.wins;if(pos==="GK"||pos==="DEF")p-=Math.floor(s.conc/4);p-=s.y;p-=s.r*3;p+=s.bonus||0;return p;}
+function scoreOf(s,pos){var p=s.apps+s.g*GOALPTS[pos]+s.a*ASTPTS[pos]+s.cs*CSPTS[pos]+s.wins;if(pos==="GK"||pos==="DEF")p-=Math.floor(s.conc/4);p-=s.y;p-=s.r*3;p+=s.bonus||0;return p;}
 function playedGames(x,n){var gp=Array.isArray(x&&x.gp)?x.gp:null,out=[];for(var i=0;i<n;i++)out.push(gp?!!gp[i]:true);return out;}
 function voteCloses(gw){var i=D.gwInfo[gw];if(!i||!i.date)return null;var d=new Date(i.date+"T21:00:00+03:00");d.setUTCDate(d.getUTCDate()+1);return d;}
 function voteOpen(gw){var i=D.gwInfo[gw],c=voteCloses(gw);return !!(i&&i.done>0&&c&&Date.now()<c.getTime());}
