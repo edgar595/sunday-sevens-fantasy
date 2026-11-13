@@ -5,7 +5,8 @@ function saveFan(){clearTimeout(picksTimer);picksTimer=setTimeout(savePicks,600)
 async function savePicks(){
   if(!SB||!USER||S.draftGW==null)return;var gw=S.draftGW,p=S.fan.picks[gw];if(!p)return;
   var q=await SB.from("picks").upsert({user_id:USER.id,gw:gw,formation:p.formation,squad:p.squad,captain:p.captain||null,updated_at:new Date().toISOString()},{onConflict:"user_id,gw"});
-  if(q.error)toast(/row-level|42501/i.test((q.error.message||"")+(q.error.code||""))?"Gameweek "+gw+" has locked. Your changes count from the next Sunday.":"Couldn’t save your team. Check your connection.");
+  if(q.error){toast(/row-level|42501/i.test((q.error.message||"")+(q.error.code||""))?"Gameweek "+gw+" has locked. Your changes count from the next Sunday.":"Couldn’t save your team. Check your connection.");return;}
+  loadSelected().then(function(){renderPlayers();});
 }
 function saveProfileSoon(){clearTimeout(profTimer);profTimer=setTimeout(saveProfile,700);}
 async function saveProfile(){
@@ -106,14 +107,14 @@ function rowHTML(p){
   if(mine)act='<button class="btn ghost sm" data-remove="'+esc(p.id)+'">Remove</button>';
   else if(w)act='<span class="why">'+esc(w)+'</span>';
   else act='<button class="btn sm" data-addp="'+esc(p.id)+'">Add</button>';
-  return '<div class="prow'+(mine?" mine":"")+'">'+shirt(p.team,p.pos==="GK","mini")+'<div class="who"><button data-pid="'+esc(p.id)+'">'+esc(p.name)+'</button><span>'+esc(T(p.team).name)+', '+POSN[p.pos]+'</span></div><span class="num">'+money(p.price)+'</span><span class="num pts-col">'+AG(p.id).pts+'</span><span class="act">'+act+'</span></div>';
+  return '<div class="prow'+(mine?" mine":"")+'">'+shirt(p.team,p.pos==="GK","mini")+'<div class="who"><button data-pid="'+esc(p.id)+'">'+esc(p.name)+'</button><span>'+esc(T(p.team).name)+', '+POSN[p.pos]+(selPct(p.id)!=null?' · '+selPct(p.id)+'% picked':'')+'</span></div><span class="num">'+money(p.price)+'</span><span class="num pts-col">'+AG(p.id).pts+'</span><span class="act">'+act+'</span></div>';
 }
 function renderPlayers(){
   var sel=$("fTeam"),cur=sel.value;
   sel.innerHTML='<option value="">Both sides</option>'+D.teams.map(function(t){return '<option value="'+esc(t.id)+'">'+esc(t.name)+'</option>';}).join("");sel.value=cur;
   var q=$("q").value.trim().toLowerCase(),fp=$("fPos").value,ft=sel.value,so=$("fSort").value;
   var list=D.players.filter(function(p){return(!fp||p.pos===fp)&&(!ft||p.team===ft)&&(!q||p.name.toLowerCase().indexOf(q)>-1);});
-  var key={pts:function(p){return -AG(p.id).pts;},form:function(p){return -AG(p.id).form;},price:function(p){return -p.price;},cheap:function(p){return +p.price;},goals:function(p){return -AG(p.id).g;}}[so];
+  var key={pts:function(p){return -AG(p.id).pts;},form:function(p){return -AG(p.id).form;},price:function(p){return -p.price;},cheap:function(p){return +p.price;},goals:function(p){return -AG(p.id).g;},sel:function(p){return -(selPct(p.id)||0);}}[so];
   list.sort(function(a,b){return key(a)-key(b)||a.name.localeCompare(b.name);});
   $("plist").innerHTML='<div class="prow head"><span></span><span>Player</span><span class="num">Price</span><span class="num pts-col">Pts</span><span></span></div>'+
     (list.length?list.map(rowHTML).join(""):'<div class="empty-note">'+(D.players.length?"No players match. Clear the search or filters to see everyone.":'No players registered yet. The admin adds them on the <a href="#admin">Admin</a> page.')+'</div>');
@@ -168,7 +169,7 @@ function playerSheet(id){
   else acts=w?'<p class="help" style="margin:0">'+esc(w)+'.</p>':'<button class="btn" data-addp="'+esc(id)+'">Add to team</button>';
   openSheet(head(esc(p.name),esc(T(p.team).name)+", "+POSN[p.pos])+
     '<div class="statgrid"><div class="fact"><span>Price</span><b>'+money(p.price)+'</b></div><div class="fact"><span>Points</span><b>'+A.pts+'</b></div><div class="fact"><span>Goals</span><b>'+A.g+'</b></div><div class="fact"><span>Assists</span><b>'+A.a+'</b></div></div>'+
-    '<p class="help" style="margin:0 0 12px">Played '+A.apps+' Sunday'+(A.apps===1?"":"s")+', on the winning side in '+A.wins+' games. '+(p.pos==="GK"||p.pos==="DEF"?A.cs+" clean-sheet games.":"")+'</p>'+
+    (selPct(id)!=null?'<p class="help" style="margin:0 0 6px"><b>Picked by '+selPct(id)+'%</b> of fantasy teams for gameweek '+S.sel.gw+' ('+(S.sel.counts[id]||0)+' of '+S.sel.total+').</p>':'')+'<p class="help" style="margin:0 0 12px">Played '+A.apps+' Sunday'+(A.apps===1?"":"s")+', on the winning side in '+A.wins+' games. '+(p.pos==="GK"||p.pos==="DEF"?A.cs+" clean-sheet games.":"")+'</p>'+
     (recent?'<table class="brk"><tbody>'+recent+'</tbody></table>':"")+'<div class="actions">'+acts+'</div>');
 }
 function pickerSheet(pos){
