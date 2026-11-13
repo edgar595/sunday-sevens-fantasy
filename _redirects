@@ -1,0 +1,5 @@
+# Netlify only: the main address opens the player site, and the admin site is not served here
+# (admin stays on GitHub Pages).
+/admin.html  /player.html  301!
+/admin.js    /player.html  301!
+/            /player.html  200
