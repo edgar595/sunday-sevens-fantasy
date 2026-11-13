@@ -186,12 +186,25 @@ function renderGate(){
   var show=false;
   if(!SB)g.innerHTML='<div class="panel gate"><h2>Connect Supabase first</h2><p>Open <code>config.js</code> and paste in your Supabase project URL and anon key, then reload. The README walks you through it.</p></div>';
   else if(!S.authChecked)g.innerHTML='<p class="help">Checking your account…</p>';
-  else if(!USER)g.innerHTML='<div class="panel gate"><h2>Sign in to manage the league</h2><p class="help">Use the account that’s been made an admin.</p><button class="btn" type="button" data-signin>Sign in</button></div>';
+  else if(!USER)g.innerHTML='<div class="panel gate"><h2>Admin sign in</h2><form class="form" id="adminLogin" autocomplete="on"><div><label class="fld" for="alUser">Username</label><input type="text" id="alUser" name="username" autocomplete="username" required></div><div><label class="fld" for="alPass">Password</label><input type="password" id="alPass" name="password" autocomplete="current-password" required style="width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:6px;background:var(--paper)"></div><p class="err"></p><button class="btn" type="submit">Sign in</button></form></div>';
   else if(!S.canEdit)g.innerHTML='<div class="panel gate"><h2>This account isn’t an admin yet</h2><p>You’re signed in as <b>'+esc(USER.email||"")+'</b>. To make it an admin, open the SQL editor in Supabase and run:</p><pre class="code">insert into public.admins (user_id)\nvalues (\''+esc(USER.id)+'\');</pre><p class="help">Then reload this page.</p><button class="btn ghost" type="button" data-signout style="margin-top:8px">Sign out</button></div>';
   else{g.innerHTML="";show=true;}
   body.style.display=show?"":"none";$("adminLede").style.display=show?"":"none";
 }
 function renderAll(){derive();renderAdmin();renderAdminNews();renderGate();}
+
+/* ---------- Username and password sign-in ----------
+   Usernames map to Supabase accounts. The password is checked by Supabase and is never stored in this code. */
+var ADMIN_DOMAIN="sundaysevens.app";
+function adminEmail(u){u=String(u||"").trim().toLowerCase();return u.indexOf("@")>-1?u:u+"@"+ADMIN_DOMAIN;}
+document.addEventListener("submit",async function(e){
+  if(e.target.id!=="adminLogin")return;e.preventDefault();
+  var f=e.target,u=f.elements.username.value,pw=f.elements.password.value;
+  if(!u.trim()||!pw)return formErr(f,"Enter your username and password.");
+  busy(f,true);
+  try{var r=await SB.auth.signInWithPassword({email:adminEmail(u),password:pw});if(r.error)throw r.error;}
+  catch(err){busy(f,false);f.elements.password.value="";formErr(f,"Wrong username or password.");}
+});
 
 /* ---------- Events ---------- */
 document.addEventListener("click",function(e){
