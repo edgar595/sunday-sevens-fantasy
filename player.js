@@ -121,6 +121,24 @@ function renderPlayers(){
 function gameChips(r,f){return '<div class="games">'+gamesOf(r).map(function(g,i){var c=g.h>g.a?"hw":g.a>g.h?"aw":"dr";return '<span class="gchip '+c+'" title="Game '+(i+1)+'">'+g.h+'–'+g.a+'</span>';}).join("")+'</div>';}
 function sideList(r,tid){var st=r.stats||{},out=[];Object.keys(st).forEach(function(pid){var p=S.players[pid];if(p&&st[pid].side===tid&&+st[pid].g)out.push({n:lastName(p.name),g:+st[pid].g});});
   out.sort(function(a,b){return b.g-a.g;});return out.map(function(x){return esc(x.n)+(x.g>1?" "+x.g:"");}).join(", ")||"No scorers";}
+function bonusBox(f){
+  var r=f.result,B=D.bonus[f.gw]||{map:{},final:false,src:"open",total:0},closes=voteCloses(f.gw),open=voteOpen(f.gw);
+  var names=function(m){return Object.keys(m).sort(function(a,b){return m[b]-m[a];}).map(function(k){return S.players[k]?'<b>'+esc(S.players[k].name)+'</b> +'+m[k]:"";}).filter(Boolean).join(", ");};
+  if(B.final&&Object.keys(B.map).length)return '<div class="motm">Bonus: '+names(B.map)+(B.src==="vote"?' <span class="prov">('+B.total+' votes)</span>':'')+'</div>';
+  if(!open)return '<div class="motm">Bonus: '+(B.src==="short"?"not enough votes, the admin will pick it.":"to be decided by the admin.")+'</div>';
+  var st=r.stats||{},played=Object.keys(st).filter(function(k){return S.players[k];}).sort(function(a,b){return S.players[a].name.localeCompare(S.players[b].name);});
+  var mine=S.myVotes[f.gw],vc=S.votes[f.gw]||{};
+  var html='<div class="vote"><b>Vote for the bonus</b><p class="help" style="margin:2px 0 0">Who was best on Sunday? The top three get 3, 2 and 1 bonus points. Voting closes '+esc(fmtWhen(closes))+'.</p>';
+  if(!USER)html+='<button class="btn sm" type="button" data-signin data-why="Sign in to vote for the bonus." style="margin-top:8px">Sign in to vote</button>';
+  else html+='<form class="voteForm" data-gw="'+f.gw+'"><select name="pid" aria-label="Your vote"><option value="">Pick a player</option>'+played.map(function(k){return '<option value="'+esc(k)+'"'+(mine===k?" selected":"")+'>'+esc(S.players[k].name)+'</option>';}).join("")+'</select><button class="btn sm" type="submit">'+(mine?"Change vote":"Vote")+'</button></form>';
+  if(mine){var ks=Object.keys(vc).filter(function(k){return st[k];}).sort(function(a,b){return vc[b]-vc[a];});
+    html+='<ul class="vlist">'+ks.map(function(k){return '<li'+(k===mine?' class="me"':'')+'><span>'+esc(S.players[k].name)+(k===mine?" (your vote)":"")+'</span><b>'+vc[k]+'</b></li>';}).join("")+'</ul>';}
+  return html+'</div>';
+}
+document.addEventListener("submit",async function(e){var form=e.target;if(!form.classList||!form.classList.contains("voteForm"))return;e.preventDefault();
+  var gw=+form.dataset.gw,pid=form.elements.pid.value;if(!pid){toast("Pick a player first.");return;}
+  busy(form,true);try{await castVote(gw,pid);renderAll();toast("Vote saved for "+S.players[pid].name);}
+  catch(err){busy(form,false);toast(/row-level|42501/i.test(((err&&err.message)||"")+((err&&err.code)||""))?"Voting for this Sunday has closed.":"Couldn’t save your vote. Try again.");}});
 function renderFixtures(){
   $("gwbar").innerHTML="";
   if(!D.fix.length){$("matches").innerHTML='<div class="empty-note">No Sundays scheduled yet. The admin sets them up on the <a href="#admin">Admin</a> page.</div>';return;}
@@ -130,7 +148,7 @@ function renderFixtures(){
     var H=T(f.home),A=T(f.away),r=f.result,n=f.games||4,ds=r?dayScore(r):null;
     var mid=r?'<span class="score">'+ds.h+'–'+ds.a+'</span>':'<span class="score ko">'+esc(f.ko||"TBC")+'</span>';
     var body;
-    if(r)body='<p class="help" style="margin:10px 0 0">Games won. Game scores:</p>'+gameChips(r,f)+'<div class="scorers"><div>'+sideList(r,f.home)+'</div><div>'+sideList(r,f.away)+'</div></div>'+(r.motm&&S.players[r.motm]?'<div class="motm">Man of the match: <b>'+esc(S.players[r.motm].name)+'</b></div>':"");
+    if(r)body='<p class="help" style="margin:10px 0 0">Games won. Game scores:</p>'+gameChips(r,f)+'<div class="scorers"><div>'+sideList(r,f.home)+'</div><div>'+sideList(r,f.away)+'</div></div>'+bonusBox(f);
     else body='<div class="motm">'+n+' games of 15 minutes, first one at '+esc(f.ko||"TBC")+'</div>';
     return '<article class="match"><div class="sun">Gameweek '+f.gw+', '+esc(fmtDate(f.date))+(f.gw===D.openGW?'<span class="tag">Next up</span>':"")+'</div><div class="mline"><div class="t">'+shirt(f.home,false,"mini")+'<span>'+esc(H.name)+'</span></div>'+mid+'<div class="t away"><span>'+esc(A.name)+'</span>'+shirt(f.away,false,"mini")+'</div></div>'+body+'</article>';
   }).join("");
@@ -161,9 +179,9 @@ function reportSheet(gw){
   var pk=picksFor(gw);if(!pk)return;var st=D.stat[gw]||{},tot=0;
   var rows=pk.squad.map(function(id){var p=S.players[id];if(!p)return "";var s=st[id],cap=id===pk.captain;
     if(!s)return '<tr><td>'+esc(p.name)+(cap?" (C)":"")+'<small class="dnp">Didn’t play</small></td><td>0</td></tr>';
-    var bits=[];if(s.g)bits.push(s.g+" goal"+(s.g>1?"s":""));if(s.a)bits.push(s.a+" assist"+(s.a>1?"s":""));if(s.side!==p.team)bits.push("played for "+T(s.side).name);if(s.wins)bits.push(s.wins+" game"+(s.wins>1?"s":"")+" won");if(s.cs&&CSPTS[p.pos])bits.push(s.cs+" clean sheet"+(s.cs>1?"s":""));if(s.motm)bits.push("man of the match");if(s.y)bits.push("yellow");if(s.r)bits.push("red");
+    var bits=[];if(s.g)bits.push(s.g+" goal"+(s.g>1?"s":""));if(s.a)bits.push(s.a+" assist"+(s.a>1?"s":""));if(s.side!==p.team)bits.push("played for "+T(s.side).name);if(s.wins)bits.push(s.wins+" game"+(s.wins>1?"s":"")+" won");if(s.cs&&CSPTS[p.pos])bits.push(s.cs+" clean sheet"+(s.cs>1?"s":""));if(s.bonus)bits.push(s.bonus+" bonus");if(s.games)bits.unshift("played "+s.apps+" of "+s.games+" game"+(s.games>1?"s":""));if(s.y)bits.push("yellow");if(s.r)bits.push("red");
     var v=s.pts*(cap?2:1);tot+=v;return '<tr><td>'+esc(p.name)+(cap?" (C)":"")+'<small>'+(bits.join(", ")||"Played")+'</small></td><td><b>'+v+'</b></td></tr>';}).join("");
-  openSheet(head("Gameweek "+gw+": "+tot+" pts",esc(fmtDate(D.gwInfo[gw]&&D.gwInfo[gw].date)))+'<table class="brk rep"><tbody>'+rows+'</tbody></table><p class="help">Captain’s points are doubled. Players who didn’t play score zero.</p><div class="actions"><button class="btn ghost" data-close>Done</button></div>');
+  openSheet(head("Gameweek "+gw+": "+tot+" pts",esc(fmtDate(D.gwInfo[gw]&&D.gwInfo[gw].date)))+'<table class="brk rep"><tbody>'+rows+'</tbody></table><p class="help">Captain’s points are doubled. Players who didn’t play score zero.'+((D.bonus[gw]&&!D.bonus[gw].final)?" Bonus points are added once voting closes.":"")+'</p><div class="actions"><button class="btn ghost" data-close>Done</button></div>');
 }
 
 function addPlayer(id){var p=S.players[id];if(!p||!S.draft)return;var w=whyNot(Object.assign({id:id},p));if(w){toast(w);return;}S.draft.squad.push(id);commitDraft();renderAll();toast(p.name+" added");}
@@ -244,6 +262,6 @@ window.addEventListener("hashchange",route);
 
 /* ---------- Start ---------- */
 route();renderAll();
-watchAuth(async function(){fanLoaded=false;onboarded=false;await loadFan();fanLoaded=true;renderAll();});
+watchAuth(async function(){fanLoaded=false;onboarded=false;await loadFan();await loadVotes();fanLoaded=true;renderAll();});
 startData();
 setInterval(function(){var before=D.openGW;derive();if(D.openGW!==before)renderAll();},60000);

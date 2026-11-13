@@ -273,3 +273,25 @@ pre.code{background:var(--paper);border:1px solid var(--line);border-radius:6px;
 code{font-size:.92em}
 button.switch{background:none;cursor:pointer;font-family:inherit}
 #teamName:disabled{opacity:.5}
+
+/* Results: per-player rows with games played */
+.srow{padding:8px 0;border-top:1px solid var(--line);font-size:14px}
+.srow-top{display:grid;grid-template-columns:minmax(0,1fr) 150px;gap:8px;align-items:center}
+.srow-top .pn{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
+.srow-top .pn small{color:var(--muted);margin-left:4px;font-weight:400}
+.srow-top select{padding:5px 6px;font-size:13px;border-radius:4px}
+.srow-bot{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;margin-top:6px}
+.gticks{display:flex;gap:4px}
+.gtick{display:inline-flex;align-items:center;gap:3px;padding:3px 7px;border:1px solid var(--line);border-radius:999px;background:var(--paper);font-size:13px;font-weight:600;cursor:pointer}
+.gtick input{width:16px;height:16px;margin:0;accent-color:var(--bib)}
+.gtick:has(input:checked){border-color:var(--bib);background:color-mix(in srgb,var(--bib) 12%,var(--surface))}
+.mini-f{display:inline-flex;align-items:center;gap:4px;font-size:12px;color:var(--muted)}
+.mini-f input[type=number]{width:46px;padding:4px;text-align:center;border:1px solid var(--line);border-radius:4px;background:var(--paper)}
+.mini-f input[type=checkbox]{width:18px;height:18px;accent-color:var(--bib)}
+.srow:has(select[data-k=side] option[value=""]:checked) .srow-bot{opacity:.4}
+.vote{margin-top:10px;padding-top:10px;border-top:1px solid var(--line)}
+.vote select{margin:6px 0}
+.vote .vlist{list-style:none;margin:6px 0 0;padding:0;font-size:14px}
+.vote .vlist li{display:flex;justify-content:space-between;padding:2px 0}
+.vote .vlist li.me b{color:var(--bib)}
+.prov{font-size:12px;color:var(--muted);font-weight:600}

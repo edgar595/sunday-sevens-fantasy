@@ -4,9 +4,10 @@ var POSN={GK:"goalkeeper",DEF:"defender",MID:"midfielder",FWD:"forward"};
 var POSL=["DEF","MID","FWD"];
 var BUDGET=32,FORMS=["2-2-1","2-1-2","1-2-2","3-1-1"];
 var GOALPTS={GK:6,DEF:6,MID:5,FWD:4},CSPTS={GK:2,DEF:2,MID:1,FWD:0},MAXSIDE=3,SQUAD=5;
+var BONUS=[3,2,1],VOTE_MIN=5;
 
 /* ---------- State ---------- */
-var S={loaded:{teams:false,players:false,fixtures:false,news:false},teams:{},players:{},fixtures:{},news:{},canEdit:false,uid:null,
+var S={votes:{},myVotes:{},loaded:{teams:false,players:false,fixtures:false,news:false},teams:{},players:{},fixtures:{},news:{},canEdit:false,uid:null,
   fan:{name:"",picks:{}},fanLocal:false,draft:null,draftGW:null};
 var D={teams:[],players:[],fix:[],gws:[],gwInfo:{},openGW:null,stat:{},agg:{},table:[]};
 var $=function(id){return document.getElementById(id);};
@@ -24,7 +25,25 @@ function iso(d){return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0"
 function addMin(t,m){var a=t.split(":").map(Number),x=a[0]*60+a[1]+m;return String(Math.floor(x/60)%24).padStart(2,"0")+":"+String(x%60).padStart(2,"0");}
 
 /* ---------- Derived data ---------- */
-function scoreOf(s,pos){var p=2+s.g*GOALPTS[pos]+s.a*3+s.cs*CSPTS[pos]+s.wins;if(pos==="GK"||pos==="DEF")p-=Math.floor(s.conc/4);p-=s.y;p-=s.r*3;if(s.motm)p+=3;return p;}
+/* Scoring: 1 point per game played; wins, clean sheets and goals conceded only count in games the player was on the pitch for.
+   Goals, assists and cards are totals for the Sunday. Bonus (3/2/1) comes from the players' vote, or from the admin. */
+function scoreOf(s,pos){var p=s.apps+s.g*GOALPTS[pos]+s.a*3+s.cs*CSPTS[pos]+s.wins;if(pos==="GK"||pos==="DEF")p-=Math.floor(s.conc/4);p-=s.y;p-=s.r*3;p+=s.bonus||0;return p;}
+function playedGames(x,n){var gp=Array.isArray(x&&x.gp)?x.gp:null,out=[];for(var i=0;i<n;i++)out.push(gp?!!gp[i]:true);return out;}
+function voteCloses(gw){var i=D.gwInfo[gw];if(!i||!i.date)return null;var d=new Date(i.date+"T21:00:00+03:00");d.setUTCDate(d.getUTCDate()+1);return d;}
+function voteOpen(gw){var i=D.gwInfo[gw],c=voteCloses(gw);return !!(i&&i.done>0&&c&&Date.now()<c.getTime());}
+function fmtWhen(d){return d?d.toLocaleString("en-GB",{weekday:"long",hour:"2-digit",minute:"2-digit",timeZone:"Africa/Nairobi"}):"";}
+function bonusFor(gw,r){
+  if(r&&r.bonus&&Object.keys(r.bonus).length)return {map:r.bonus,final:true,src:"admin",total:0};
+  if(r&&r.motm){var m={};m[r.motm]=3;return {map:m,final:true,src:"admin",total:0};}
+  var c=S.votes[gw]||{},st=(r&&r.stats)||{},total=0,ids=Object.keys(c).filter(function(k){return st[k];});
+  ids.forEach(function(k){total+=c[k];});
+  var c2=voteCloses(gw),closed=c2&&Date.now()>=c2.getTime();
+  if(!closed)return {map:{},final:false,src:"open",total:total};
+  if(total<VOTE_MIN)return {map:{},final:false,src:"short",total:total};
+  var levels=[];ids.forEach(function(k){if(c[k]>0&&levels.indexOf(c[k])<0)levels.push(c[k]);});levels.sort(function(a,b){return b-a;});
+  var map={};ids.forEach(function(k){var i=levels.indexOf(c[k]);if(i>-1&&i<BONUS.length)map[k]=BONUS[i];});
+  return {map:map,final:true,src:"vote",total:total};
+}
 function gamesOf(r){return (r&&Array.isArray(r.games)?r.games:[]).filter(function(g){return g&&g.h!=null&&g.a!=null;}).map(function(g){return {h:+g.h||0,a:+g.a||0};});}
 function dayScore(r){var h=0,a=0;gamesOf(r).forEach(function(g){if(g.h>g.a)h++;else if(g.a>g.h)a++;});return {h:h,a:a};}
 function derive(){
@@ -38,20 +57,23 @@ function derive(){
   var now=Date.now();D.openGW=null;
   D.gws.forEach(function(g){var i=gws[g];i.deadline=i.date?new Date(i.date+"T"+(i.ko||"09:00")):null;
     if(D.openGW==null&&i.done<i.n&&(!i.deadline||i.deadline.getTime()>now))D.openGW=g;});
-  D.stat={};var agg={};D.players.forEach(function(p){agg[p.id]={pts:0,g:0,a:0,cs:0,apps:0,wins:0,gw:{}};});
+  D.stat={};D.bonus={};var agg={};D.players.forEach(function(p){agg[p.id]={pts:0,g:0,a:0,cs:0,apps:0,wins:0,gw:{}};});
   var ser={};D.teams.forEach(function(t){ser[t.id]={t:t,p:0,w:0,d:0,l:0,gw:0,gl:0,f:0,a:0};});
   D.fix.forEach(function(f){
     var r=f.result;if(!r)return;var games=gamesOf(r),st=r.stats||{},ds=dayScore(r);
     var h=ser[f.home],a=ser[f.away],hf=0,af=0;games.forEach(function(g){hf+=g.h;af+=g.a;});
     if(h&&a){h.p++;a.p++;h.gw+=ds.h;h.gl+=ds.a;a.gw+=ds.a;a.gl+=ds.h;h.f+=hf;h.a+=af;a.f+=af;a.a+=hf;
       if(ds.h>ds.a){h.w++;a.l++;}else if(ds.a>ds.h){a.w++;h.l++;}else{h.d++;a.d++;}}
+    var B=bonusFor(f.gw,r);D.bonus[f.gw]=B;
     Object.keys(st).forEach(function(pid){var p=S.players[pid],x=st[pid];if(!p||!x||!x.side)return;
       var home=x.side===f.home;if(!home&&x.side!==f.away)return;
-      var s={side:x.side,g:+x.g||0,a:+x.a||0,y:x.y?1:0,r:x.r?1:0,motm:r.motm===pid?1:0,wins:0,cs:0,conc:0,games:games.length};
-      games.forEach(function(g){var mine=home?g.h:g.a,opp=home?g.a:g.h;s.conc+=opp;if(opp===0)s.cs++;if(mine>opp)s.wins++;});
+      var gp=playedGames(x,games.length);
+      var s={side:x.side,g:+x.g||0,a:+x.a||0,y:x.y?1:0,r:x.r?1:0,bonus:+B.map[pid]||0,apps:0,wins:0,cs:0,conc:0,games:games.length,gp:gp};
+      games.forEach(function(g,i){if(!gp[i])return;var mine=home?g.h:g.a,opp=home?g.a:g.h;s.apps++;s.conc+=opp;if(opp===0)s.cs++;if(mine>opp)s.wins++;});
+      if(!s.apps)return;
       s.pts=scoreOf(s,p.pos);
       var bucket=D.stat[f.gw]||(D.stat[f.gw]={});
-      if(bucket[pid]){var o=bucket[pid];["g","a","y","r","motm","wins","cs","conc","pts"].forEach(function(k){o[k]+=s[k];});}else bucket[pid]=s;
+      if(bucket[pid]){var o=bucket[pid];["g","a","y","r","bonus","apps","wins","cs","conc","pts"].forEach(function(k){o[k]+=s[k];});}else bucket[pid]=s;
       var A=agg[pid];if(A){A.pts+=s.pts;A.g+=s.g;A.a+=s.a;A.apps++;A.cs+=s.cs;A.wins+=s.wins;A.gw[f.gw]=(A.gw[f.gw]||0)+s.pts;}
     });
   });
@@ -115,11 +137,25 @@ function reload(key){clearTimeout(reloadTimers[key]);reloadTimers[key]=setTimeou
 async function startData(){
   var keys=Object.keys(TABLE);
   if(!SB){setStatus("This site isn’t connected to Supabase yet. Add your project URL and anon key to config.js (see the README).");keys.forEach(function(k){S.loaded[k]=true;});renderAll();return;}
-  try{await Promise.all(keys.map(loadTable));setStatus("");}
+  try{await Promise.all(keys.map(loadTable));await loadVotes();setStatus("");}
   catch(e){setStatus("Couldn’t load the league. Check your connection and reload the page.");keys.forEach(function(k){S.loaded[k]=true;});}
   renderAll();
   try{var ch=SB.channel("league");keys.forEach(function(k){ch.on("postgres_changes",{event:"*",schema:"public",table:TABLE[k]},function(){reload(k);});});ch.subscribe();}catch(e){}
 }
+/* ---------- Bonus votes ---------- */
+async function loadVotes(){
+  if(!SB)return;
+  try{var q=await SB.rpc("vote_counts");if(!q.error){var o={};(q.data||[]).forEach(function(r){(o[r.gw]=o[r.gw]||{})[r.player_id]=+r.votes;});S.votes=o;}}catch(e){}
+  var mv={};
+  if(USER){try{var m=await SB.from("votes").select("gw,player_id").eq("user_id",USER.id);if(!m.error)(m.data||[]).forEach(function(r){mv[r.gw]=r.player_id;});}catch(e){}}
+  S.myVotes=mv;
+}
+async function castVote(gw,pid){
+  if(!SB||!USER)throw {code:"auth"};
+  var q=await SB.from("votes").upsert({user_id:USER.id,gw:gw,player_id:pid,created_at:new Date().toISOString()},{onConflict:"user_id,gw"});
+  if(q.error)throw q.error;await loadVotes();
+}
+setInterval(function(){if(SB)loadVotes().then(function(){if(typeof renderAll==="function")renderAll();});},60000);
 async function put(key,id,data){
   var row=toRow(key,data),q=id?await SB.from(TABLE[key]).update(row).eq("id",id).select("id"):await SB.from(TABLE[key]).insert(row).select("id");
   if(q.error)throw q.error;if(!q.data||!q.data.length)throw {code:"42501"};reload(key);return q.data[0].id;}

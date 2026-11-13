@@ -82,14 +82,26 @@ function resultSheet(id){
   var f=S.fixtures[id],r=f.result||{},st=r.stats||{},n=Math.max(f.games||4,gamesOf(r).length),gs=gamesOf(r),H=T(f.home),A=T(f.away);
   var rows="";for(var i=0;i<n;i++){var g=gs[i]||{};rows+='<div class="grow"><span>Game '+(i+1)+'</span><input type="number" min="0" max="30" data-gh="'+i+'" aria-label="Game '+(i+1)+' '+esc(H.name)+'" value="'+(g.h!=null?g.h:"")+'"><span>–</span><input type="number" min="0" max="30" data-ga="'+i+'" aria-label="Game '+(i+1)+' '+esc(A.name)+'" value="'+(g.a!=null?g.a:"")+'"></div>';}
   var pl=D.players.slice().sort(function(a,b){return T(a.team).name.localeCompare(T(b.team).name)||POSL.indexOf(a.pos)-POSL.indexOf(b.pos)||a.name.localeCompare(b.name);});
-  var prow=pl.map(function(p){var x=st[p.id],side=x?x.side:(f.result?"":(p.team===f.home||p.team===f.away?p.team:""));x=x||{};
-    return '<div class="stat-row" data-sp="'+esc(p.id)+'" data-usual="'+esc(p.team)+'"><span class="pn">'+esc(p.name)+'<small>'+p.pos+'</small></span><select data-k="side" aria-label="'+esc(p.name)+' played for"><option value="">Didn’t play</option><option value="'+esc(f.home)+'"'+(side===f.home?" selected":"")+'>'+esc(H.name)+'</option><option value="'+esc(f.away)+'"'+(side===f.away?" selected":"")+'>'+esc(A.name)+'</option></select><input type="number" min="0" max="30" data-k="g" aria-label="'+esc(p.name)+' goals" value="'+(+x.g||0)+'"><input type="number" min="0" max="30" data-k="a" aria-label="'+esc(p.name)+' assists" value="'+(+x.a||0)+'"><input type="checkbox" data-k="y" aria-label="'+esc(p.name)+' yellow card"'+(x.y?" checked":"")+'><input type="checkbox" data-k="r" aria-label="'+esc(p.name)+' red card"'+(x.r?" checked":"")+'></div>';}).join("");
+  var prow=pl.map(function(p){var x=st[p.id],side=x?x.side:(f.result?"":(p.team===f.home||p.team===f.away?p.team:""));var gp=x?playedGames(x,n):playedGames(null,n);x=x||{};
+    var ticks="";for(var i=0;i<n;i++)ticks+='<label class="gtick"><input type="checkbox" data-gp="'+i+'"'+(gp[i]?" checked":"")+'><span>G'+(i+1)+'</span></label>';
+    return '<div class="srow" data-sp="'+esc(p.id)+'"><div class="srow-top"><span class="pn">'+esc(p.name)+'<small>'+p.pos+'</small></span><select data-k="side" aria-label="'+esc(p.name)+' played for"><option value="">Didn’t come</option><option value="'+esc(f.home)+'"'+(side===f.home?" selected":"")+'>'+esc(H.name)+'</option><option value="'+esc(f.away)+'"'+(side===f.away?" selected":"")+'>'+esc(A.name)+'</option></select></div>'+
+      '<div class="srow-bot"><div class="gticks" aria-label="Games '+esc(p.name)+' played">'+ticks+'</div>'+
+      '<label class="mini-f">Gls<input type="number" min="0" max="30" data-k="g" aria-label="'+esc(p.name)+' goals" value="'+(+x.g||0)+'"></label>'+
+      '<label class="mini-f">Ast<input type="number" min="0" max="30" data-k="a" aria-label="'+esc(p.name)+' assists" value="'+(+x.a||0)+'"></label>'+
+      '<label class="mini-f">Y<input type="checkbox" data-k="y" aria-label="'+esc(p.name)+' yellow card"'+(x.y?" checked":"")+'></label>'+
+      '<label class="mini-f">R<input type="checkbox" data-k="r" aria-label="'+esc(p.name)+' red card"'+(x.r?" checked":"")+'></label></div></div>';}).join("");
+  var b=r.bonus||{};if(!Object.keys(b).length&&r.motm){b={};b[r.motm]=3;}
+  function pick(pts){var cur=Object.keys(b).filter(function(k){return b[k]===pts;})[0]||"";
+    return '<div><label class="fld" for="bonus'+pts+'">'+pts+' bonus point'+(pts>1?"s":"")+'</label><select id="bonus'+pts+'" name="bonus'+pts+'"><option value="">No one</option>'+pl.map(function(p){return '<option value="'+esc(p.id)+'"'+(cur===p.id?" selected":"")+'>'+esc(p.name)+'</option>';}).join("")+'</select></div>';}
+  var vc=S.votes[f.gw]||{},vl=Object.keys(vc).sort(function(x,y){return vc[y]-vc[x];}).map(function(k){return (S.players[k]?esc(S.players[k].name):"?")+" "+vc[k];}),closes=voteCloses(f.gw);
   openSheet(head("Sunday’s results","Gameweek "+f.gw+", "+esc(fmtDate(f.date)))+
     '<form class="form" id="resultForm" data-id="'+esc(id)+'"><div class="grow hd"><span></span><span>'+esc(H.short)+'</span><span></span><span>'+esc(A.short)+'</span></div>'+rows+
     '<p class="help" style="margin:0">Leave a game blank if it wasn’t played.</p>'+
-    '<div class="res-team"><h3>Who played</h3><p class="help" style="margin:0 0 8px">Everyone starts on their usual side. Change it for anyone who switched, and set “Didn’t play” for anyone who missed it. Goals and assists are totals for the whole day.</p>'+
-    '<div class="stat-row hd"><span>Player</span><span>Played for</span><span>Goals</span><span>Assists</span><span>Yel</span><span>Red</span></div>'+(prow||'<p class="help">No players registered yet.</p>')+'</div>'+
-    '<div><label class="fld" for="motm">Man of the match</label><select id="motm" name="motm"><option value="">Not chosen</option>'+pl.map(function(p){return '<option value="'+esc(p.id)+'"'+(r.motm===p.id?" selected":"")+'>'+esc(p.name)+'</option>';}).join("")+'</select></div>'+
+    '<div class="res-team"><h3>Who played</h3><p class="help" style="margin:0 0 8px">Pick the side each player played for, or “Didn’t come”. Tick the games they were on the pitch for: they get 1 point per game, and wins and clean sheets only count in those games. Goals, assists and cards are totals for the whole Sunday.</p>'+
+    (prow||'<p class="help">No players registered yet.</p>')+'</div>'+
+    '<div class="res-team"><h3>Bonus points</h3><p class="help" style="margin:0 0 8px">Leave these empty and the players vote: the top three get 3, 2 and 1. Voting closes '+esc(fmtWhen(closes))+'. If fewer than '+VOTE_MIN+' people vote, pick the bonus here. Anything you pick here replaces the vote.</p>'+
+    '<p class="help" style="margin:0 0 8px"><b>Votes so far:</b> '+(vl.length?vl.join(", "):"none yet")+'</p>'+
+    '<div class="pair" style="grid-template-columns:1fr 1fr 1fr">'+pick(3)+pick(2)+pick(1)+'</div></div>'+
     '<p class="err"></p><div class="actions"><button class="btn" type="submit">Save results</button>'+(f.result?'<button class="btn danger" type="button" data-clearres="'+esc(id)+'">Clear results</button>':"")+'</div></form>');
 }
 function genSheet(){
@@ -138,14 +150,19 @@ document.addEventListener("submit",async function(e){
       if(bad)return formErr(form,"Each game needs a score for both sides, or leave both blank.");
       if(!games.length)return formErr(form,"Enter the score of at least one game.");
       var stats={},gh=0,ga=0,th=0,ta=0;games.forEach(function(g){th+=g.h;ta+=g.a;});
+      var noGames=[];
       form.querySelectorAll("[data-sp]").forEach(function(row){var pid=row.dataset.sp,side=row.querySelector('[data-k=side]').value;if(!side)return;
+        var gp=[];row.querySelectorAll("[data-gp]").forEach(function(c){var i=+c.dataset.gp;if(i<games.length)gp[i]=c.checked;});
+        for(var i=0;i<games.length;i++)gp[i]=!!gp[i];
+        if(gp.indexOf(true)<0){noGames.push(S.players[pid].name);return;}
         var g=parseInt(row.querySelector('[data-k=g]').value,10)||0,a=parseInt(row.querySelector('[data-k=a]').value,10)||0;
-        stats[pid]={side:side,g:g,a:a,y:row.querySelector('[data-k=y]').checked?1:0,r:row.querySelector('[data-k=r]').checked?1:0};
+        stats[pid]={side:side,gp:gp,g:g,a:a,y:row.querySelector('[data-k=y]').checked?1:0,r:row.querySelector('[data-k=r]').checked?1:0};
         if(side===f.home)gh+=g;else ga+=g;});
-      var motm=form.elements.motm.value||null;
-      if(motm&&!stats[motm])return formErr(form,"Man of the match is marked as not playing. Set which side they played for.");
+      if(noGames.length)return formErr(form,"Tick at least one game for "+noGames.join(", ")+", or set them to “Didn’t come”.");
+      var bonus={},bseen={},bbad="";[3,2,1].forEach(function(pts){var v=form.elements["bonus"+pts].value;if(!v)return;if(bseen[v])bbad=S.players[v].name+" is picked for more than one bonus.";if(!stats[v])bbad=S.players[v].name+" didn’t play, so can’t get a bonus.";bseen[v]=1;bonus[v]=pts;});
+      if(bbad)return formErr(form,bbad);
       if(gh>th||ga>ta)return formErr(form,"More goals are credited to players than were scored. "+T(f.home).short+" "+gh+" of "+th+", "+T(f.away).short+" "+ga+" of "+ta+".");
-      var body=clone(f);body.games=Math.max(f.games||4,games.length);body.result={games:games,stats:stats,motm:motm};
+      var body=clone(f);body.games=Math.max(f.games||4,games.length);body.result={games:games,stats:stats,bonus:Object.keys(bonus).length?bonus:null};
       busy(form,true);await put("fixtures",xid,body);busy(form,false);closeSheet();var ds=dayScore(body.result);toast("Saved: "+T(f.home).short+" "+ds.h+"–"+ds.a+" "+T(f.away).short+" in games won");
     }else if(form.id==="genForm"){
       var g0=parseInt(form.elements.gw.value,10),d0=form.elements.date.value,ko=form.elements.ko.value,count=parseInt(form.elements.count.value,10)||0,ng=parseInt(form.elements.games.value,10)||4,every=+form.elements.every.value||7;

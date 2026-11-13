@@ -115,7 +115,9 @@
           <li>No more than three players from the same side, so you need both Wazee and Vijana in your team.</li>
           <li>Choose a captain. Their points count double.</li>
           <li>Each Sunday is one gameweek. Changes lock when the first game starts, and after that they count from the next Sunday.</li>
-          <li>Players score for whichever side they actually played for that day. If one of your players doesn’t turn up, they score zero.</li>
+          <li>Players score for whichever side they actually played for that day, and only for the games they were on the pitch. If one of your players doesn’t turn up, they score zero.</li>
+          <li>Goals, assists and cards count for the whole Sunday.</li>
+          <li>After each Sunday, everyone votes for the best player. The top three get 3, 2 and 1 bonus points. Voting closes Monday at 21:00. If fewer than 5 people vote, the admin picks the bonus.</li>
         </ul>
       </div>
       <div class="panel">
@@ -124,13 +126,13 @@
         <table class="brk">
           <thead><tr><th></th><th>Action</th><th>DEF</th><th>MID</th><th>FWD</th></tr></thead>
           <tbody>
-            <tr><td></td><td>Turns up and plays</td><td>2</td><td>2</td><td>2</td></tr>
+            <tr><td></td><td>Each game played</td><td>1</td><td>1</td><td>1</td></tr>
             <tr><td></td><td>Goal</td><td>6</td><td>5</td><td>4</td></tr>
             <tr><td></td><td>Assist</td><td>3</td><td>3</td><td>3</td></tr>
-            <tr><td></td><td>Each game won by their side</td><td>1</td><td>1</td><td>1</td></tr>
-            <tr><td></td><td>Each game with a clean sheet</td><td>2</td><td>1</td><td>0</td></tr>
-            <tr><td></td><td>Every 4 goals conceded in the day</td><td>−1</td><td>0</td><td>0</td></tr>
-            <tr><td></td><td>Man of the match (one per Sunday)</td><td>3</td><td>3</td><td>3</td></tr>
+            <tr><td></td><td>Each game they played that their side won</td><td>1</td><td>1</td><td>1</td></tr>
+            <tr><td></td><td>Each game they played with a clean sheet</td><td>2</td><td>1</td><td>0</td></tr>
+            <tr><td></td><td>Every 4 goals conceded in the games they played</td><td>−1</td><td>0</td><td>0</td></tr>
+            <tr><td></td><td>Bonus vote: 1st, 2nd and 3rd most votes</td><td>3/2/1</td><td>3/2/1</td><td>3/2/1</td></tr>
             <tr><td></td><td>Yellow card</td><td>−1</td><td>−1</td><td>−1</td></tr>
             <tr><td></td><td>Red card</td><td>−3</td><td>−3</td><td>−3</td></tr>
           </tbody>
