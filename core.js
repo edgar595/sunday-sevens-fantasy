@@ -7,7 +7,7 @@ var GOALPTS={GK:6,DEF:6,MID:5,FWD:4},ASTPTS={GK:5,DEF:5,MID:4,FWD:3},CSPTS={GK:2
 var BONUS=[3,2,1],VOTE_MIN=5;
 
 /* ---------- State ---------- */
-var S={votes:{},myVotes:{},loaded:{teams:false,players:false,fixtures:false,news:false},teams:{},players:{},fixtures:{},news:{},canEdit:false,uid:null,
+var S={sel:{gw:null,counts:{},total:0},votes:{},myVotes:{},loaded:{teams:false,players:false,fixtures:false,news:false},teams:{},players:{},fixtures:{},news:{},canEdit:false,uid:null,
   fan:{name:"",picks:{}},fanLocal:false,draft:null,draftGW:null};
 var D={teams:[],players:[],fix:[],gws:[],gwInfo:{},openGW:null,stat:{},agg:{},table:[]};
 var $=function(id){return document.getElementById(id);};
@@ -137,7 +137,7 @@ function reload(key){clearTimeout(reloadTimers[key]);reloadTimers[key]=setTimeou
 async function startData(){
   var keys=Object.keys(TABLE);
   if(!SB){setStatus("This site isn’t connected to Supabase yet. Add your project URL and anon key to config.js (see the README).");keys.forEach(function(k){S.loaded[k]=true;});renderAll();return;}
-  try{await Promise.all(keys.map(loadTable));await loadVotes();setStatus("");}
+  try{await Promise.all(keys.map(loadTable));await loadVotes();await loadSelected();setStatus("");}
   catch(e){setStatus("Couldn’t load the league. Check your connection and reload the page.");keys.forEach(function(k){S.loaded[k]=true;});}
   renderAll();
   try{var ch=SB.channel("league");keys.forEach(function(k){ch.on("postgres_changes",{event:"*",schema:"public",table:TABLE[k]},function(){reload(k);});});ch.subscribe();}catch(e){}
@@ -155,7 +155,14 @@ async function castVote(gw,pid){
   var q=await SB.from("votes").upsert({user_id:USER.id,gw:gw,player_id:pid,created_at:new Date().toISOString()},{onConflict:"user_id,gw"});
   if(q.error)throw q.error;await loadVotes();
 }
-setInterval(function(){if(SB)loadVotes().then(function(){if(typeof renderAll==="function")renderAll();});},60000);
+/* ---------- Selected by (% of fantasy teams that picked each player) ---------- */
+async function loadSelected(){
+  if(!SB)return;if(!D.gws.length)derive();
+  var gw=D.openGW!=null?D.openGW:(D.gws.length?D.gws[D.gws.length-1]:null);if(gw==null)return;
+  try{var q=await SB.rpc("selected_by",{p_gw:gw});if(q.error)return;var c={},t=0;(q.data||[]).forEach(function(r){c[r.player_id]=+r.picks;t=+r.managers||t;});S.sel={gw:gw,counts:c,total:t};}catch(e){}
+}
+function selPct(pid){return S.sel.total?Math.round(100*(S.sel.counts[pid]||0)/S.sel.total):null;}
+setInterval(function(){if(SB)Promise.all([loadVotes(),loadSelected()]).then(function(){if(typeof renderAll==="function")renderAll();});},60000);
 async function put(key,id,data){
   var row=toRow(key,data),q=id?await SB.from(TABLE[key]).update(row).eq("id",id).select("id"):await SB.from(TABLE[key]).insert(row).select("id");
   if(q.error)throw q.error;if(!q.data||!q.data.length)throw {code:"42501"};reload(key);return q.data[0].id;}
