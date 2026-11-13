@@ -257,7 +257,33 @@ function renderGate(){
   else{g.innerHTML="";show=true;}
   body.style.display=show?"":"none";$("adminLede").style.display=show?"":"none";
 }
-function renderAll(){derive();renderAdmin();renderAdminNews();renderGate();}
+function renderAll(){derive();renderAdmin();renderAdminNews();renderGate();renderPeople();}
+
+/* ---------- People: everyone who has signed up ---------- */
+var PEOPLE=null,ALLPICKS=null;
+async function loadPeople(){
+  if(!SB||!S.canEdit)return;
+  try{var r=await Promise.all([SB.rpc("admin_people"),SB.from("picks").select("user_id,gw,formation,squad,captain,updated_at")]);
+    if(!r[0].error)PEOPLE=r[0].data||[];else toast("Couldn’t load people.");if(!r[1].error)ALLPICKS=r[1].data||[];}catch(e){toast("Couldn’t load people.");}
+  renderPeople();
+}
+function shortDate(s){if(!s)return "–";var d=new Date(s);return isNaN(d)?"–":d.toLocaleDateString("en-GB",{day:"numeric",month:"short"});}
+function renderPeople(){
+  var el=$("aPeople");if(!el)return;
+  if(!PEOPLE){el.innerHTML='<div class="empty-note">Loading…</div>';$("peopleSum").textContent="";return;}
+  var byU={};(ALLPICKS||[]).forEach(function(p){(byU[p.user_id]=byU[p.user_id]||{})[p.gw]=p;});
+  function eff(u,gw){var m=byU[u]||{},best=null;Object.keys(m).map(Number).forEach(function(k){if(k<=gw&&(best==null||k>best))best=k;});return best==null?null:m[best];}
+  function pts(u){var t=0;(D.doneG||[]).forEach(function(g){var pk=eff(u,g);if(!pk)return;var st=D.stat[g]||{};(pk.squad||[]).forEach(function(id){var s=st[id];if(s)t+=s.pts*(id===pk.captain?2:1);});});return t;}
+  var g=D.openGW,list=PEOPLE.filter(function(p){return !p.is_admin;}).map(function(p){var pk=g!=null?eff(p.user_id,g):null,n=pk?(pk.squad||[]).length:0;return {p:p,pts:pts(p.user_id),n:n,cap:pk&&pk.captain};});
+  list.sort(function(a,b){return b.pts-a.pts||String(a.p.manager||a.p.email).localeCompare(String(b.p.manager||b.p.email));});
+  var ready=list.filter(function(x){return x.n===SQUAD&&x.cap;}).length;
+  $("peopleSum").textContent=list.length+" "+(list.length===1?"person has":"people have")+" signed up"+(g!=null?". "+ready+" "+(ready===1?"has":"have")+" a full team with a captain for gameweek "+g+".":".");
+  if(!list.length){el.innerHTML='<div class="empty-note">No one has signed up yet. Share the player site link with your friends.</div>';return;}
+  el.innerHTML='<table class="people"><thead><tr><th>#</th><th>Person</th><th>Supports</th><th>'+(g!=null?"GW"+g+" team":"Team")+'</th><th>Pts</th><th>Joined</th><th>Last seen</th></tr></thead><tbody>'+
+    list.map(function(x,i){var p=x.p,side=p.fav_side&&S.teams[p.fav_side];
+      var team=g==null?"–":x.n===0?'<span class="tag">Not picked</span>':x.n<SQUAD?'<span class="tag">'+x.n+'/'+SQUAD+'</span>':(x.cap?'<span class="tag done">Ready</span>':'<span class="tag">No captain</span>');
+      return '<tr><td>'+(i+1)+'</td><td><b>'+esc(p.manager||"No name yet")+'</b>'+(p.team_name?' · '+esc(p.team_name):'')+'<small>'+esc(p.email||"")+(p.provider&&p.provider!=="email"?' ('+esc(p.provider)+')':'')+'</small></td><td>'+(side?esc(side.name):"–")+'</td><td>'+team+'</td><td><b>'+x.pts+'</b></td><td>'+shortDate(p.created_at)+'</td><td>'+shortDate(p.last_sign_in_at)+'</td></tr>';}).join("")+'</tbody></table>';
+}
 
 /* ---------- Username and password sign-in ----------
    Usernames map to Supabase accounts. The password is checked by Supabase and is never stored in this code. */
@@ -275,7 +301,8 @@ document.addEventListener("submit",async function(e){
 /* ---------- Events ---------- */
 document.addEventListener("click",function(e){
   var t=e.target.closest&&e.target.closest("button");if(!t)return;var d=t.dataset;
-  if(d.sub){sub=d.sub;renderAdmin();return;}
+  if(d.sub){sub=d.sub;renderAdmin();if(sub==="people")loadPeople();return;}
+  if(t.hasAttribute("data-peoplerefresh")){loadPeople();return;}
   if(d.editteam){teamSheet(d.editteam);return;}
   if(d.editplayer){playerEditSheet(d.editplayer);return;}
   if(d.editfix){fixSheet(d.editfix);return;}
