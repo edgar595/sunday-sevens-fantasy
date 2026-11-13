@@ -104,6 +104,54 @@ function resultSheet(id){
     '<div class="pair" style="grid-template-columns:1fr 1fr 1fr">'+pick(3)+pick(2)+pick(1)+'</div></div>'+
     '<p class="err"></p><div class="actions"><button class="btn" type="submit">Save results</button>'+(f.result?'<button class="btn danger" type="button" data-clearres="'+esc(id)+'">Clear results</button>':"")+'</div></form>');
 }
+/* ---------- Automatic match report ----------
+   Written from the saved result and posted to News. Saving the result again updates the same story. */
+function listNames(a){return a.length<2?a.join(""):a.slice(0,-1).join(", ")+" and "+a[a.length-1];}
+function numWord(n){return ["no","one","two","three","four","five","six","seven","eight","nine","ten"][n]||String(n);}
+function matchReport(f){
+  var r=f.result,gs=gamesOf(r),ds=dayScore(r),H=T(f.home),A=T(f.away),st=D.stat[f.gw]||{},n=gs.length;
+  var win=ds.h>ds.a?H:ds.a>ds.h?A:null,lose=win===H?A:win===A?H:null,wd=win===H?ds.h:ds.a,ld=win===H?ds.a:ds.h;
+  var gH=0,gA=0;gs.forEach(function(g){gH+=g.h;gA+=g.a;});
+  var pick=function(arr){return arr[f.gw%arr.length];};
+  var title=win?pick([win.name+" take Gameweek "+f.gw,win.name+" win the day "+wd+"–"+ld,"Gameweek "+f.gw+": "+win.name+" edge "+lose.name])
+               :"Gameweek "+f.gw+": honours even at "+ds.h+"–"+ds.a;
+  var p=[];
+  var scores=gs.map(function(g,i){return "game "+(i+1)+" "+g.h+"–"+g.a;});
+  if(win)p.push(win.name+" won "+fmtDate(f.date)+" by "+wd+" games to "+ld+" against "+lose.name+". "+
+    "Game by game, "+H.name+" first: "+listNames(scores)+". Over the "+numWord(n)+" games it finished "+gH+"–"+gA+" in goals.");
+  else p.push(H.name+" and "+A.name+" couldn’t be separated on "+fmtDate(f.date)+", sharing the day "+ds.h+"–"+ds.a+" in games. "+
+    "Game by game, "+H.name+" first: "+listNames(scores)+". Goals finished "+gH+"–"+gA+".");
+  var ids=Object.keys(st).filter(function(k){return S.players[k];});
+  var scorers=ids.filter(function(k){return st[k].g>0;}).sort(function(a,b){return st[b].g-st[a].g;});
+  var assisters=ids.filter(function(k){return st[k].a>0;}).sort(function(a,b){return st[b].a-st[a].a;});
+  var nm=function(k){return S.players[k].name;},cnt=function(k,key,w){var v=st[k][key];return nm(k)+(v>1?" ("+v+")":"");};
+  if(scorers.length){var top=scorers[0],tg=st[top].g;
+    var s1=tg>=3?nm(top)+" stole the show with a hat-trick"+(tg>3?" and more, "+tg+" goals in all":"")+".":tg===2?nm(top)+" led the scoring with two goals.":"The goals were shared around.";
+    p.push(s1+" On the scoresheet: "+listNames(scorers.map(function(k){return cnt(k,"g");}))+"."+
+      (assisters.length?" Assists from "+listNames(assisters.map(function(k){return cnt(k,"a");}))+".":""));}
+  else p.push("Not one goal was credited to a player, so the defences will be pleased.");
+  var ranked=ids.slice().sort(function(a,b){return st[b].pts-st[a].pts||st[b].g-st[a].g;}).slice(0,3);
+  if(ranked.length)p.push("Top fantasy scorers so far: "+listNames(ranked.map(function(k){return nm(k)+" "+st[k].pts+" pts";}))+". Bonus points are still to come.");
+  var iron=ids.filter(function(k){return n>1&&st[k].apps===n;}),dclean=ids.filter(function(k){return S.players[k].pos==="DEF"&&st[k].cs>0;}).sort(function(a,b){return st[b].cs-st[a].cs;});
+  var extra=[];
+  if(iron.length&&iron.length<=6)extra.push(listNames(iron.map(nm))+" played all "+numWord(n)+" games");
+  if(dclean.length)extra.push(listNames(dclean.slice(0,3).map(function(k){return nm(k)+" ("+st[k].cs+")";}))+" picked up clean sheets at the back");
+  var reds=ids.filter(function(k){return st[k].r;}),yel=ids.filter(function(k){return st[k].y&&!st[k].r;});
+  if(reds.length)extra.push(listNames(reds.map(nm))+" saw red");
+  if(yel.length)extra.push(listNames(yel.map(nm))+" went into the book");
+  if(extra.length)p.push(extra.join(". ").replace(/^./,function(c){return c.toUpperCase();})+".");
+  var ser={};(D.series||[]).forEach(function(x){ser[x.t.id]=x;});var sh=ser[f.home]||{w:0},sa=ser[f.away]||{w:0};
+  p.push(sh.w===sa.w?"The series is level at "+sh.w+"–"+sa.w+".":(sh.w>sa.w?H.name:A.name)+" lead the series "+Math.max(sh.w,sa.w)+"–"+Math.min(sh.w,sa.w)+".");
+  var nxt=D.gws.filter(function(g){return g>f.gw;})[0],ni=nxt!=null?D.gwInfo[nxt]:null;
+  p.push("Vote for the bonus on the Sundays page before "+fmtWhen(voteCloses(f.gw))+": the top three get 3, 2 and 1 points."+(ni?" Next up is gameweek "+nxt+" on "+fmtDate(ni.date)+", first game at "+ni.ko+".":""));
+  return {title:title,body:p.join("\n\n"),side:win?(win===H?f.home:f.away):null};
+}
+async function postMatchReport(fid,body){
+  S.fixtures[fid]=Object.assign({},S.fixtures[fid],body);derive();
+  var f=Object.assign({id:fid},S.fixtures[fid]),rep=matchReport(f),nid="gw"+f.gw+"-report";
+  var q=await SB.from("news").upsert({id:nid,title:rep.title,body:rep.body,side:rep.side,created_at:(S.news[nid]&&S.news[nid].at)||new Date().toISOString()},{onConflict:"id"});
+  if(q.error)throw q.error;reload("news");toast("Results saved and match report posted to News");
+}
 function genSheet(){
   var start=D.gws.length?D.gws[D.gws.length-1]+1:1,last=D.fix.length?D.fix[D.fix.length-1].date:null,d0=nextSundayISO();
   if(last&&last>=d0){var d=new Date(last+"T12:00:00");d.setDate(d.getDate()+7);d0=iso(d);}
@@ -163,7 +211,8 @@ document.addEventListener("submit",async function(e){
       if(bbad)return formErr(form,bbad);
       if(gh>th||ga>ta)return formErr(form,"More goals are credited to players than were scored. "+T(f.home).short+" "+gh+" of "+th+", "+T(f.away).short+" "+ga+" of "+ta+".");
       var body=clone(f);body.games=Math.max(f.games||4,games.length);body.result={games:games,stats:stats,bonus:Object.keys(bonus).length?bonus:null};
-      busy(form,true);await put("fixtures",xid,body);busy(form,false);closeSheet();var ds=dayScore(body.result);toast("Saved: "+T(f.home).short+" "+ds.h+"–"+ds.a+" "+T(f.away).short+" in games won");
+      busy(form,true);await put("fixtures",xid,body);busy(form,false);closeSheet();
+      try{await postMatchReport(xid,body);}catch(e){toast("Results saved, but the match report couldn’t be posted.");}var ds=dayScore(body.result);toast("Saved: "+T(f.home).short+" "+ds.h+"–"+ds.a+" "+T(f.away).short+" in games won");
     }else if(form.id==="genForm"){
       var g0=parseInt(form.elements.gw.value,10),d0=form.elements.date.value,ko=form.elements.ko.value,count=parseInt(form.elements.count.value,10)||0,ng=parseInt(form.elements.games.value,10)||4,every=+form.elements.every.value||7;
       if(D.teams.length<2)return formErr(form,"Add both sides first.");
