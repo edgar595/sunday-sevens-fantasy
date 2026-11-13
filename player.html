@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Sunday Sevens Fantasy</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header class="top">
+  <div class="top-in">
+    <div class="brand"><span>Sunday Sevens Fantasy</span><small>Wazee v Vijana, every Sunday</small></div>
+    <div class="top-right"><div class="deadline" id="deadline"></div><div id="acct"></div></div>
+  </div>
+  <nav aria-label="Main">
+    <a href="#news" data-view="news">News</a>
+    <a href="#team" data-view="team">My team</a>
+    <a href="#players" data-view="players">Players</a>
+    <a href="#fixtures" data-view="fixtures">Sundays</a>
+    <a href="#standings" data-view="standings">Standings</a>
+    <a href="#rules" data-view="rules">Rules</a>
+    
+  </nav>
+</header>
+<div class="status"><p id="status">Loading the league…</p></div>
+
+<main>
+  <section class="view" id="v-news">
+    <div class="news-grid">
+      <div>
+        <h1 class="view-title">News</h1>
+        <div id="newsChips"></div>
+        <div id="newsList"></div>
+      </div>
+      <aside>
+        <div class="panel nbox"><h2>Next Sunday</h2><div id="nNext"></div></div>
+        <div class="panel nbox"><h2>The series</h2><div id="nSeries"></div></div>
+        <div class="panel nbox"><h2>Your team</h2><div id="nTeam"></div></div>
+      </aside>
+    </div>
+  </section>
+
+  <section class="view" id="v-team">
+    <div class="team-grid">
+      <div>
+        <div class="pitch" id="pitch">
+          <div class="chalk c-out"></div><div class="chalk c-half"></div><div class="chalk c-circ"></div>
+          <div class="chalk c-boxT"></div><div class="chalk c-boxB"></div>
+          <div class="rows" id="rows"></div>
+        </div>
+      </div>
+      <aside>
+        <div class="panel">
+          <label class="fld" for="teamName">Your team name</label>
+          <input type="text" id="teamName" maxlength="28" placeholder="Name your team">
+          <div class="facts">
+            <div class="fact"><span>Money left</span><b id="fBank"></b></div>
+            <div class="fact"><span>Players</span><b id="fCount"></b></div>
+            <div class="fact"><span>Season pts</span><b id="fPts"></b></div>
+          </div>
+          <label class="fld">Formation (defenders, midfielders, forwards)</label>
+          <div class="forms" id="forms"></div>
+          <p class="help" id="teamHelp"></p>
+          <div class="locked" id="saveNote"></div>
+          <p class="help" id="profileLine"></p>
+        </div>
+        <div class="panel">
+          <h2>Your gameweeks</h2>
+          <ul class="hist" id="hist"></ul>
+        </div>
+      </aside>
+    </div>
+  </section>
+
+  <section class="view" id="v-players">
+    <h1 class="view-title">Players</h1>
+    <p class="lede">Every registered player in the league. Players are listed under their usual side. Prices are set by the admin.</p>
+    <div class="filters">
+      <input type="search" id="q" placeholder="Search by name" aria-label="Search players">
+      <select id="fPos" aria-label="Position"><option value="">All positions</option><option value="DEF">Defenders</option><option value="MID">Midfielders</option><option value="FWD">Forwards</option></select>
+      <select id="fTeam" aria-label="Club"></select>
+      <select id="fSort" aria-label="Sort by"><option value="pts">Most points</option><option value="form">Best form</option><option value="price">Highest price</option><option value="cheap">Lowest price</option><option value="goals">Most goals</option></select>
+    </div>
+    <div class="plist" id="plist"></div>
+  </section>
+
+  <section class="view" id="v-fixtures">
+    <h1 class="view-title">Sundays</h1>
+    <p class="lede">Each Sunday is four 15-minute games between the two sides. The side that wins more games takes the day.</p>
+    <div class="gwbar" id="gwbar"></div>
+    <div class="matches" id="matches"></div>
+  </section>
+
+  <section class="view" id="v-standings">
+    <h1 class="view-title">Standings</h1>
+    <p class="lede">The running series between the two sides, and the players scoring the most fantasy points.</p>
+    <div class="two">
+      <div><h2 class="section-h">The series</h2><div class="tablewrap" id="league"></div><p class="help">Sundays are won by winning more of the day’s games. Games and goals are shown as for–against.</p></div>
+      <div><h2 class="section-h">Top players</h2><div class="tablewrap" id="leaders"></div></div>
+    </div>
+  </section>
+
+  <section class="view" id="v-rules">
+    <h1 class="view-title">How it works</h1>
+    <p class="lede">Pick five players from Wazee and Vijana, stay under budget, and score points from what they do across Sunday’s four games.</p>
+    <div class="rules">
+      <div class="panel">
+        <h2>Building your team</h2>
+        <ul>
+          <li>Five players: defenders, midfielders and forwards in the formation you choose. It’s 5-a-side, so there are no keepers.</li>
+          <li>£32.0m to spend.</li>
+          <li>No more than three players from the same side, so you need both Wazee and Vijana in your team.</li>
+          <li>Choose a captain. Their points count double.</li>
+          <li>Each Sunday is one gameweek. Changes lock when the first game starts, and after that they count from the next Sunday.</li>
+          <li>Players score for whichever side they actually played for that day. If one of your players doesn’t turn up, they score zero.</li>
+        </ul>
+      </div>
+      <div class="panel">
+        <h2>Scoring</h2>
+        <div class="tablewrap" style="border:0">
+        <table class="brk">
+          <thead><tr><th></th><th>Action</th><th>DEF</th><th>MID</th><th>FWD</th></tr></thead>
+          <tbody>
+            <tr><td></td><td>Turns up and plays</td><td>2</td><td>2</td><td>2</td></tr>
+            <tr><td></td><td>Goal</td><td>6</td><td>5</td><td>4</td></tr>
+            <tr><td></td><td>Assist</td><td>3</td><td>3</td><td>3</td></tr>
+            <tr><td></td><td>Each game won by their side</td><td>1</td><td>1</td><td>1</td></tr>
+            <tr><td></td><td>Each game with a clean sheet</td><td>2</td><td>1</td><td>0</td></tr>
+            <tr><td></td><td>Every 4 goals conceded in the day</td><td>−1</td><td>0</td><td>0</td></tr>
+            <tr><td></td><td>Man of the match (one per Sunday)</td><td>3</td><td>3</td><td>3</td></tr>
+            <tr><td></td><td>Yellow card</td><td>−1</td><td>−1</td><td>−1</td></tr>
+            <tr><td></td><td>Red card</td><td>−3</td><td>−3</td><td>−3</td></tr>
+          </tbody>
+        </table>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<div class="scrim" id="scrim" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+  <div class="sheet" id="sheet"></div>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="config.js"></script>
+<script src="core.js"></script>
+<script src="player.js"></script>
+</body>
+</html>

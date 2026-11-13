@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Wazee v Vijana admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body class="admin-mode">
+<header class="top">
+  <div class="top-in">
+    <div class="brand"><span>Wazee v Vijana admin</span><small>Sides, players, Sundays, results and news</small></div>
+    <div class="top-right"><a class="switch" href="player.html">Open player site</a><div id="acct"></div></div>
+  </div>
+</header>
+<div class="status"><p id="status">Loading the league…</p></div>
+
+<main>
+  <section class="view on" id="v-admin">
+    <h1 class="view-title">League admin</h1>
+    <div id="gate"></div>
+    <p class="lede" id="adminLede">Set up the two sides, register players, schedule Sundays and enter the four game scores after each one. Everyone playing the fantasy game sees changes straight away.</p>
+    <div id="adminBody">
+      <div class="subtabs" id="subtabs">
+        <button class="chipbtn" data-sub="teams">Sides</button>
+        <button class="chipbtn" data-sub="players">Players</button>
+        <button class="chipbtn" data-sub="fixtures">Sundays and results</button>
+        <button class="chipbtn" data-sub="news">News</button>
+      </div>
+
+      <div class="sub" id="s-teams">
+        <div class="admin-grid">
+          <div class="panel">
+            <h2>Add a side</h2>
+            <form class="form" id="teamForm"></form>
+          </div>
+          <div class="plist" id="aTeams"></div>
+        </div>
+      </div>
+
+      <div class="sub" id="s-players">
+        <div class="admin-grid">
+          <div>
+            <div class="panel">
+              <h2>Add a player</h2>
+              <form class="form" id="playerForm"></form>
+            </div>
+            <div class="panel">
+              <h2>Add a whole squad</h2>
+              <form class="form" id="bulkForm">
+                <div><label class="fld" for="bTeam">Usual side</label><select id="bTeam" name="team" required></select></div>
+                <div><label class="fld" for="bList">One player per line: name, position, price</label>
+                <textarea id="bList" name="list" placeholder="Brian Otieno, DEF, 5&#10;Kevin Kamau, MID, 4.5&#10;Musa Diallo, FWD, 7"></textarea></div>
+                <p class="err" id="bErr"></p>
+                <button class="btn" type="submit">Add players</button>
+              </form>
+            </div>
+          </div>
+          <div>
+            <div class="filters" style="grid-template-columns:1fr 1fr">
+              <select id="aPTeam" aria-label="Filter by team"></select>
+              <input type="search" id="aPQ" placeholder="Search by name" aria-label="Search players">
+            </div>
+            <div class="plist" id="aPlayers"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="sub" id="s-fixtures">
+        <div class="admin-grid">
+          <div>
+            <div class="panel">
+              <h2>Add a Sunday</h2>
+              <form class="form" id="fixForm"></form>
+            </div>
+            <div class="panel">
+              <h2>Schedule several Sundays</h2>
+              <p class="help" style="margin:0 0 12px">Sets up a run of Sundays in one go, four games each.</p>
+              <button class="btn ghost full" id="genBtn" type="button">Schedule Sundays</button>
+            </div>
+          </div>
+          <div class="plist" id="aFix"></div>
+        </div>
+      </div>
+
+      <div class="sub" id="s-news">
+        <div class="admin-grid">
+          <div class="panel">
+            <h2>Post a story</h2>
+            <form class="form" id="newsForm"></form>
+          </div>
+          <div class="plist" id="aNews"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<div class="scrim" id="scrim" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+  <div class="sheet" id="sheet"></div>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="config.js"></script>
+<script src="core.js"></script>
+<script src="admin.js"></script>
+</body>
+</html>
