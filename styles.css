@@ -274,6 +274,11 @@ code{font-size:.92em}
 button.switch{background:none;cursor:pointer;font-family:inherit}
 #teamName:disabled{opacity:.5}
 
+/* Admin: people */
+.peoplehead{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin:0 0 12px}
+table.people td:nth-child(2){min-width:180px}
+table.people td:nth-child(4),table.people th:nth-child(4){text-align:left}
+
 /* Results: per-player rows with games played */
 .srow{padding:8px 0;border-top:1px solid var(--line);font-size:14px}
 .srow-top{display:grid;grid-template-columns:minmax(0,1fr) 150px;gap:8px;align-items:center}
